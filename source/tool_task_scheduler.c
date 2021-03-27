@@ -27,17 +27,17 @@ static bool tool_ts_initialze(tool_ts_handle_t* handle, const tool_ts_config_t *
 	
   fifo_cfg.buffer = &config->prtorityHigh.eventBuffer[0];
 	fifo_cfg.count = config->prtorityHigh.bufferQuantity;
-	fifo_cfg.itemSize = sizeof(tool_ts_execute_t);
+	fifo_cfg.itemSize = sizeof(tool_ts_event_t);
 	tool_fifo_init(&handle->fifo.high, &fifo_cfg);
 	
   fifo_cfg.buffer = &config->prtorityNormal.eventBuffer[0];
 	fifo_cfg.count = config->prtorityNormal.bufferQuantity;
-	fifo_cfg.itemSize = sizeof(tool_ts_execute_t);
+	fifo_cfg.itemSize = sizeof(tool_ts_event_t);
 	tool_fifo_init(&handle->fifo.normal, &fifo_cfg);
 	
   fifo_cfg.buffer = &config->prtorityLow.eventBuffer[0];
 	fifo_cfg.count = config->prtorityLow.bufferQuantity;
-	fifo_cfg.itemSize = sizeof(tool_ts_execute_t);
+	fifo_cfg.itemSize = sizeof(tool_ts_event_t);
 	tool_fifo_init(&handle->fifo.low, &fifo_cfg);
 
 	handle->flag = 0;
@@ -45,7 +45,7 @@ static bool tool_ts_initialze(tool_ts_handle_t* handle, const tool_ts_config_t *
 }
 
 static bool tool_ts_start(tool_ts_handle_t* handle) {
-	tool_ts_execute_t task = {0x00000000, 0x00000000};
+	tool_ts_event_t task = {0x00000000, 0x00000000};
 
 	if (handle->flag != 0)
 		return false;
@@ -74,8 +74,15 @@ static bool tool_ts_stop(tool_ts_handle_t* handle) {
 }
 
 
-static bool tool_ts_addTask(tool_ts_handle_t* handle, tool_ts_execute_t task, tool_ts_prtority prtority) {
-
+static bool tool_ts_addTask(tool_ts_handle_t* handle, tool_ts_execute execute, void* attachment, tool_ts_prtority prtority) {
+	if(!execute)
+	  return false;
+	
+  tool_ts_event_t task = {
+	  .execute = execute,
+		.attachment = attachment
+	};
+	
 	switch (prtority) {
 		case tool_ts_prtority_low:
 			return tool_fifo_insert(&handle->fifo.low, &task);
@@ -88,7 +95,15 @@ static bool tool_ts_addTask(tool_ts_handle_t* handle, tool_ts_execute_t task, to
 	}
 }
 
-static bool tool_ts_addTaskSuper(tool_ts_handle_t *handle, tool_ts_execute_t task, tool_ts_prtority prtority) {
+static bool tool_ts_addTaskSuper(tool_ts_handle_t* handle, tool_ts_execute execute, void* attachment, tool_ts_prtority prtority) {
+  if(!execute)
+	  return false;
+	
+	tool_ts_event_t task = {
+	  .execute = execute,
+		.attachment = attachment
+	};
+		
 	switch (prtority) {
 		case tool_ts_prtority_low:
 			return tool_fifo_insertTail(&handle->fifo.low, &task);
