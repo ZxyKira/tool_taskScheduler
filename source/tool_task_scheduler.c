@@ -1,150 +1,114 @@
-//*****************************************************************************
-//*			File Name		:TaskScheduler.c
-//*			Version			:V1.1
-//*			Create Date	:2018-09-09
-//*			Modufy Date	:2019-06-10
-//*			Information :
-//*****************************************************************************
+/* *****************************************************************************************
+ *    File Name   :tool_task_scheduler.c
+ *    Create Date :2018-09-09
+ *    Modufy Date :2021-03-28
+ *    Information :
+ */
+
 #include "tool_task_scheduler.h"
 #include "tool_fifo.h"
 
-//*****************************************************************************
-//*	Typedef Struct
-//*****************************************************************************
+/* *****************************************************************************************
+ *	Typedef Struct
+ */
+static void tool_ts_idleExecute(void* args){}
 
-//-------------------------------------
-//	Struct TS_Handler_Struct_T
-//------------------------------------- 
-typedef struct{
-	struct{
-		tool_fifo_t high;
-		tool_fifo_t normal;
-		tool_fifo_t low;
-	}Fifo;
-	struct{
-		TS_Callback Idle;
-		TS_Callback Reserved;
-	}Callback;
-	struct{
-		uint16_t reserved2 	:16;
-		uint8_t	 start 			:8;
-		uint8_t	 reserved 	:8;
-	}info;
-}TS_Handler_Entity_T;
-
-#define TS_tool_fifo_t tool_fifo_t
-
-//-------------------------------------
-//	TS_Idle_Callback
-//------------------------------------- 
-static void TS_Idle_Callback(void) {
-	
-}
-
-//*****************************************************************************
-//*	Public Function 
-//*****************************************************************************
-static bool TS_Initialze(ts_handle_t *pHandler, const TS_Config_T *config) {
-	TS_Handler_Entity_T *entity = (TS_Handler_Entity_T*)pHandler;
+/* *****************************************************************************************
+ *	Public Function 
+ */
+static bool tool_ts_initialze(tool_ts_handle_t* handle, const tool_ts_config_t *config) {
 	tool_fifo_config_t fifo_cfg;
 		
-	if (config->idleCallback == 0x00000000)
-		entity->Callback.Idle = TS_Idle_Callback;
+	if (config->idleCallback.execute == 0x00000000)
+		handle->idleCallback.execute = tool_ts_idleExecute;
 	else
-		entity->Callback.Idle = config->idleCallback;
+    handle->idleCallback = config->idleCallback;
 	
-  fifo_cfg.buffer = &config->PrtorityHigh.pEventBuffer[0];
-	fifo_cfg.count = config->PrtorityHigh.bufferQuantity;
-	fifo_cfg.itemSize = sizeof(TS_Event_T);
-	tool_fifo_api.init(&entity->Fifo.high, &fifo_cfg);
 	
-  fifo_cfg.buffer = &config->PrtorityNormal.pEventBuffer[0];
-	fifo_cfg.count = config->PrtorityNormal.bufferQuantity;
-	fifo_cfg.itemSize = sizeof(TS_Event_T);
-	tool_fifo_api.init(&entity->Fifo.normal, &fifo_cfg);
+  fifo_cfg.buffer = &config->prtorityHigh.eventBuffer[0];
+	fifo_cfg.count = config->prtorityHigh.bufferQuantity;
+	fifo_cfg.itemSize = sizeof(tool_ts_execute_t);
+	tool_fifo_init(&handle->fifo.high, &fifo_cfg);
 	
-  fifo_cfg.buffer = &config->PrtorityLow.pEventBuffer[0];
-	fifo_cfg.count = config->PrtorityLow.bufferQuantity;
-	fifo_cfg.itemSize = sizeof(TS_Event_T);
-	tool_fifo_api.init(&entity->Fifo.low, &fifo_cfg);
+  fifo_cfg.buffer = &config->prtorityNormal.eventBuffer[0];
+	fifo_cfg.count = config->prtorityNormal.bufferQuantity;
+	fifo_cfg.itemSize = sizeof(tool_ts_execute_t);
+	tool_fifo_init(&handle->fifo.normal, &fifo_cfg);
+	
+  fifo_cfg.buffer = &config->prtorityLow.eventBuffer[0];
+	fifo_cfg.count = config->prtorityLow.bufferQuantity;
+	fifo_cfg.itemSize = sizeof(tool_ts_execute_t);
+	tool_fifo_init(&handle->fifo.low, &fifo_cfg);
 
-	entity->info.start = 0;
+	handle->flag = 0;
 	return true;
 }
 
-static bool TS_Start(ts_handle_t *pHandler) {
-	TS_Handler_Entity_T *entity = (TS_Handler_Entity_T*)pHandler;
-	TS_Event_T task = {0x00000000, 0x00000000};
+static bool tool_ts_start(tool_ts_handle_t* handle) {
+	tool_ts_execute_t task = {0x00000000, 0x00000000};
 
-	if (entity->info.start != 0)
+	if (handle->flag != 0)
 		return false;
 
-	entity->info.start = 1;
+	handle->flag = 1;
 
-	while (entity->info.start != 0) {
-		if (tool_fifo_api.pop(&entity->Fifo.high, &task)) 
-			task.task(task.args);
-		else if (tool_fifo_api.pop(&entity->Fifo.normal, &task))
-			task.task(task.args);
-		else if (tool_fifo_api.pop(&entity->Fifo.low, &task))
-			task.task(task.args);
+	while (handle->flag != 0) {
+		if (tool_fifo_pop(&handle->fifo.high, &task)) 
+			task.execute(task.attachment);
+		else if (tool_fifo_pop(&handle->fifo.normal, &task))
+			task.execute(task.attachment);
+		else if (tool_fifo_pop(&handle->fifo.low, &task))
+			task.execute(task.attachment);
 		else
-			entity->Callback.Idle();
+			handle->idleCallback.execute(handle->idleCallback.attachment);
 	}
 	return true;
 }
 
-static bool TS_Stop(ts_handle_t *pHandler) {
-	TS_Handler_Entity_T *entity = (TS_Handler_Entity_T*)pHandler;
-	if (entity->info.start == 0)
+static bool tool_ts_stop(tool_ts_handle_t* handle) {
+	if (handle->flag == 0)
 		return false;
 
-	entity->info.start = 0;
+	handle->flag = 0;
 	return true;
 }
 
 
-static bool TS_AddTask(ts_handle_t *pHandler, TS_Event_T task, TS_Task_Prtority prtority) {
-	TS_Handler_Entity_T *entity = (TS_Handler_Entity_T*)pHandler;
+static bool tool_ts_addTask(tool_ts_handle_t* handle, tool_ts_execute_t task, tool_ts_prtority prtority) {
 
 	switch (prtority) {
-		case TS_PrtorityLow:
-			return tool_fifo_api.insert(&entity->Fifo.low, &task);
-		case TS_PrtorityNormal:
-			return tool_fifo_api.insert(&entity->Fifo.normal, &task);
-		case TS_PrtorityHigh:
-			return tool_fifo_api.insert(&entity->Fifo.high, &task);
+		case tool_ts_prtority_low:
+			return tool_fifo_insert(&handle->fifo.low, &task);
+		case tool_ts_prtority_normal:
+			return tool_fifo_insert(&handle->fifo.normal, &task);
+		case tool_ts_prtority_high:
+			return tool_fifo_insert(&handle->fifo.high, &task);
 		default:
 			return false;
 	}
 }
 
-static bool TS_AddTaskSuper(ts_handle_t *pHandler, TS_Event_T task, TS_Task_Prtority prtority) {
-	TS_Handler_Entity_T *entity = (TS_Handler_Entity_T*)pHandler;
-
+static bool tool_ts_addTaskSuper(tool_ts_handle_t *handle, tool_ts_execute_t task, tool_ts_prtority prtority) {
 	switch (prtority) {
-		case TS_PrtorityLow:
-			return tool_fifo_api.insertTail(&entity->Fifo.low, &task);
-		case TS_PrtorityNormal:
-			return tool_fifo_api.insertTail(&entity->Fifo.normal, &task);
-		case TS_PrtorityHigh:
-			return tool_fifo_api.insertTail(&entity->Fifo.high, &task);
+		case tool_ts_prtority_low:
+			return tool_fifo_insertTail(&handle->fifo.low, &task);
+		case tool_ts_prtority_normal:
+			return tool_fifo_insertTail(&handle->fifo.normal, &task);
+		case tool_ts_prtority_high:
+			return tool_fifo_insertTail(&handle->fifo.high, &task);
 		default:
 			return false;
 	}
 }
 
-
-
-const TS_API_T TS_API = {
-	.initialze = TS_Initialze,
-	.start = TS_Start,
-	.stop = TS_Stop,
-	.addTask = TS_AddTask,
-	.addTaskSuper = TS_AddTaskSuper
+const tool_ts_api_t tool_ts_api = {
+	.initialze = tool_ts_initialze,
+	.start = tool_ts_start,
+	.stop = tool_ts_stop,
+	.addTask = tool_ts_addTask,
+	.addTaskSuper = tool_ts_addTaskSuper
 };
 
-//*****************************************************************************
-//*	End of file
-//*****************************************************************************
-
+/* *****************************************************************************************
+ *	End of file
+ */
