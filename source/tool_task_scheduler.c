@@ -17,110 +17,110 @@
  */
  
 /*-------------------------------------
- *  tool_ts_initialze 
+ *  tool_task_scheduler_initialze 
  */ 
-static bool tool_ts_initialze(tool_ts_handle_t* handle, const tool_ts_config_t *config) {
+bool tool_task_scheduler_initialze(tool_task_scheduler_handle_t* _this, const tool_task_scheduler_config_t *config) {
   tool_fifo_config_t fifo_cfg;
   
   fifo_cfg.buffer = &config->prtorityHigh.eventBuffer[0];
   fifo_cfg.count = config->prtorityHigh.bufferQuantity;
-  fifo_cfg.itemSize = sizeof(tool_ts_event_t);
-  tool_fifo_init(&handle->fifo.high, &fifo_cfg);
+  fifo_cfg.itemSize = sizeof(tool_task_scheduler_event_t);
+  tool_fifo_init(&_this->fifo.high, &fifo_cfg);
   
   fifo_cfg.buffer = &config->prtorityNormal.eventBuffer[0];
   fifo_cfg.count = config->prtorityNormal.bufferQuantity;
-  fifo_cfg.itemSize = sizeof(tool_ts_event_t);
-  tool_fifo_init(&handle->fifo.normal, &fifo_cfg);
+  fifo_cfg.itemSize = sizeof(tool_task_scheduler_event_t);
+  tool_fifo_init(&_this->fifo.normal, &fifo_cfg);
   
   fifo_cfg.buffer = &config->prtorityLow.eventBuffer[0];
   fifo_cfg.count = config->prtorityLow.bufferQuantity;
-  fifo_cfg.itemSize = sizeof(tool_ts_event_t);
-  tool_fifo_init(&handle->fifo.low, &fifo_cfg);
+  fifo_cfg.itemSize = sizeof(tool_task_scheduler_event_t);
+  tool_fifo_init(&_this->fifo.low, &fifo_cfg);
   
-  handle->flag = 0;
+  _this->flag = 0;
   return true;
 }
 
 /*-------------------------------------
- *  tool_ts_execute 
+ *  tool_task_scheduler_execute 
  */ 
-static bool tool_ts_execute(tool_ts_handle_t* handle) {
-  tool_ts_event_t task = {0x00000000, 0x00000000};
+bool tool_task_scheduler_execute(tool_task_scheduler_handle_t* _this) {
+  tool_task_scheduler_event_t task = {0x00000000, 0x00000000};
 
-  if(handle->flag)
+  if(_this->flag)
     return false;
   
-  handle->flag = 1;
+  _this->flag = 1;
   
-  while(handle->flag) {
-    if (tool_fifo_pop(&handle->fifo.high, &task)) 
+  while(_this->flag) {
+    if (tool_fifo_pop(&_this->fifo.high, &task)) 
       task.execute(task.attachment);
-    else if (tool_fifo_pop(&handle->fifo.normal, &task))
+    else if (tool_fifo_pop(&_this->fifo.normal, &task))
       task.execute(task.attachment);
-    else if (tool_fifo_pop(&handle->fifo.low, &task))
+    else if (tool_fifo_pop(&_this->fifo.low, &task))
       task.execute(task.attachment);
     else
       break;
   }
   
-  handle->flag = 0;
+  _this->flag = 0;
   return true;
 }
 
 /*-------------------------------------
- *  tool_ts_breakExecute 
+ *  tool_task_scheduler_breakExecute 
  */ 
-static bool tool_ts_breakExecute(tool_ts_handle_t* handle) {
-  if (!handle->flag)
+bool tool_task_scheduler_breakExecute(tool_task_scheduler_handle_t* _this) {
+  if (!_this->flag)
     return false;
 
-  handle->flag = 0;
+  _this->flag = 0;
   return true;
 }
 
 /*-------------------------------------
- *  tool_ts_addTask 
+ *  tool_task_scheduler_addTask 
  */ 
-static bool tool_ts_addTask(tool_ts_handle_t* handle, tool_ts_execute_t execute, void* attachment, tool_ts_prtority prtority) {
+bool tool_task_scheduler_addTask(tool_task_scheduler_handle_t* _this, tool_task_scheduler_execute_t execute, void* attachment, tool_task_scheduler_prtority prtority) {
   if(!execute)
     return false;
   
-  tool_ts_event_t task = {
+  tool_task_scheduler_event_t task = {
     .execute = execute,
     .attachment = attachment
   };
   
   switch (prtority) {
-    case tool_ts_prtority_low:
-      return tool_fifo_insert(&handle->fifo.low, &task);
-    case tool_ts_prtority_normal:
-      return tool_fifo_insert(&handle->fifo.normal, &task);
-    case tool_ts_prtority_high:
-      return tool_fifo_insert(&handle->fifo.high, &task);
+    case tool_task_scheduler_prtority_low:
+      return tool_fifo_insert(&_this->fifo.low, &task);
+    case tool_task_scheduler_prtority_normal:
+      return tool_fifo_insert(&_this->fifo.normal, &task);
+    case tool_task_scheduler_prtority_high:
+      return tool_fifo_insert(&_this->fifo.high, &task);
     default:
       return false;
   }
 }
 
 /*-------------------------------------
- *  tool_ts_addTaskSuper 
+ *  tool_task_scheduler_addTaskSuper 
  */ 
-static bool tool_ts_addTaskSuper(tool_ts_handle_t* handle, tool_ts_execute_t execute, void* attachment, tool_ts_prtority prtority) {
+bool tool_task_scheduler_addTaskSuper(tool_task_scheduler_handle_t* _this, tool_task_scheduler_execute_t execute, void* attachment, tool_task_scheduler_prtority prtority) {
   if(!execute)
     return false;
   
-  tool_ts_event_t task = {
+  tool_task_scheduler_event_t task = {
     .execute = execute,
     .attachment = attachment
   };
     
   switch (prtority) {
-    case tool_ts_prtority_low:
-      return tool_fifo_insertTail(&handle->fifo.low, &task);
-    case tool_ts_prtority_normal:
-      return tool_fifo_insertTail(&handle->fifo.normal, &task);
-    case tool_ts_prtority_high:
-      return tool_fifo_insertTail(&handle->fifo.high, &task);
+    case tool_task_scheduler_prtority_low:
+      return tool_fifo_insertTail(&_this->fifo.low, &task);
+    case tool_task_scheduler_prtority_normal:
+      return tool_fifo_insertTail(&_this->fifo.normal, &task);
+    case tool_task_scheduler_prtority_high:
+      return tool_fifo_insertTail(&_this->fifo.high, &task);
     default:
       return false;
   }
@@ -129,12 +129,12 @@ static bool tool_ts_addTaskSuper(tool_ts_handle_t* handle, tool_ts_execute_t exe
 /* *****************************************************************************************
  *  Link API 
  */
-const tool_ts_api_t tool_ts_api = {
-  .initialze    = tool_ts_initialze,
-  .execute      = tool_ts_execute,
-  .breakExecute = tool_ts_breakExecute,
-  .addTask      = tool_ts_addTask,
-  .addTaskSuper = tool_ts_addTaskSuper
+const tool_task_scheduler_api_t tool_task_scheduler_api = {
+  .initialze    = tool_task_scheduler_initialze,
+  .execute      = tool_task_scheduler_execute,
+  .breakExecute = tool_task_scheduler_breakExecute,
+  .addTask      = tool_task_scheduler_addTask,
+  .addTaskSuper = tool_task_scheduler_addTaskSuper
 };
 
 /* *****************************************************************************************
