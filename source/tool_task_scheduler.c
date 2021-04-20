@@ -21,11 +21,11 @@
  */ 
 bool tool_task_scheduler_initialze(tool_task_scheduler_handle_t* _this, const tool_task_scheduler_config_t *config){
   void* buffer;
-	int itemSize;
-	int count;
+  int itemSize;
+  int count;
   
   buffer = &config->prtorityHigh.eventBuffer[0];
-	itemSize = sizeof(tool_task_scheduler_event_t);
+  itemSize = sizeof(tool_task_scheduler_event_t);
   count = config->prtorityHigh.bufferQuantity;
   tool_fifo_init(&_this->fifo.high, buffer, itemSize, count);
   
