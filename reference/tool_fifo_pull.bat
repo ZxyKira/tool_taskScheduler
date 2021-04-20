@@ -1,3 +1,3 @@
 cd tool_fifo
-git pull https://github.com/ZxyKira/tool_fifo.git master
+git pull https://github.com/ZxyKira/tool_fifo.git release
 pause

@@ -1,0 +1,4 @@
+[submodule "reference/tool_fifo"]
+	path = reference/tool_fifo
+	url = https://github.com/ZxyKira/tool_fifo.git
+	branch = release
