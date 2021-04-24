@@ -1,31 +1,60 @@
 /* *****************************************************************************************
  *    File Name   :tool_task_scheduler.c
  *    Create Date :2018-09-09
- *    Modufy Date :2021-04-20
+ *    Modufy Date :2021-04-25
  *    Information :
  */
 
+/* *****************************************************************************************
+ *    Include
+ */ 
 #include "tool_task_scheduler.h"
 #include "tool_fifo.h"
 
+
+
 /* *****************************************************************************************
- *  Typedef Struct
+ *    Macro
+ */ 
+
+/* *****************************************************************************************
+ *    Extern Function/Variable
  */
 
 /* *****************************************************************************************
- *  Public Function 
+ *    Typedef List
+ */ 
+
+/* *****************************************************************************************
+ *    Typedef Function
+ */ 
+
+/* *****************************************************************************************
+ *    Struct/Union/Enum
+ */ 
+
+/* *****************************************************************************************
+ *    Typedef Struct/Union/Enum
+ */ 
+
+/* *****************************************************************************************
+ *    Private Variable
+ */
+
+/* *****************************************************************************************
+ *    Public Variable
  */
  
-/*-------------------------------------
- *  tool_task_scheduler_initialze 
- */ 
+/*----------------------------------------
+ *  tool_task_scheduler_initialze
+ *----------------------------------------*/
 bool tool_task_scheduler_initialze(tool_task_scheduler_handle_t* _this, const tool_task_scheduler_config_t *config){
   void* buffer;
-	int itemSize;
-	int count;
+  int itemSize;
+  int count;
   
   buffer = &config->prtorityHigh.eventBuffer[0];
-	itemSize = sizeof(tool_task_scheduler_event_t);
+  itemSize = sizeof(tool_task_scheduler_event_t);
   count = config->prtorityHigh.bufferQuantity;
   tool_fifo_init(&_this->fifo.high, buffer, itemSize, count);
   
@@ -43,9 +72,11 @@ bool tool_task_scheduler_initialze(tool_task_scheduler_handle_t* _this, const to
   return true;
 }
 
-/*-------------------------------------
- *  tool_task_scheduler_execute 
- */ 
+
+
+/*----------------------------------------
+ *  tool_task_scheduler_execute
+ *----------------------------------------*/
 bool tool_task_scheduler_execute(tool_task_scheduler_handle_t* _this) {
   tool_task_scheduler_event_t task = {0x00000000, 0x00000000};
 
@@ -69,9 +100,11 @@ bool tool_task_scheduler_execute(tool_task_scheduler_handle_t* _this) {
   return true;
 }
 
-/*-------------------------------------
- *  tool_task_scheduler_breakExecute 
- */ 
+
+
+/*----------------------------------------
+ *  tool_task_scheduler_breakExecute
+ *----------------------------------------*/
 bool tool_task_scheduler_breakExecute(tool_task_scheduler_handle_t* _this) {
   if (!_this->flag)
     return false;
@@ -80,9 +113,11 @@ bool tool_task_scheduler_breakExecute(tool_task_scheduler_handle_t* _this) {
   return true;
 }
 
-/*-------------------------------------
- *  tool_task_scheduler_addTask 
- */ 
+
+
+/*----------------------------------------
+ *  tool_task_scheduler_addTask
+ *----------------------------------------*/
 bool tool_task_scheduler_addTask(tool_task_scheduler_handle_t* _this, tool_task_scheduler_execute_t execute, void* attachment, tool_task_scheduler_prtority prtority) {
   if(!execute)
     return false;
@@ -104,9 +139,11 @@ bool tool_task_scheduler_addTask(tool_task_scheduler_handle_t* _this, tool_task_
   }
 }
 
-/*-------------------------------------
- *  tool_task_scheduler_addTaskSuper 
- */ 
+
+
+/*----------------------------------------
+ *  tool_task_scheduler_addTaskSuper
+ *----------------------------------------*/
 bool tool_task_scheduler_addTaskSuper(tool_task_scheduler_handle_t* _this, tool_task_scheduler_execute_t execute, void* attachment, tool_task_scheduler_prtority prtority) {
   if(!execute)
     return false;
@@ -128,16 +165,24 @@ bool tool_task_scheduler_addTaskSuper(tool_task_scheduler_handle_t* _this, tool_
   }
 }
 
+
+
 /* *****************************************************************************************
- *  Link API 
+ *    API Link
  */
-const tool_task_scheduler_api_t tool_task_scheduler_api = {
+
+/*----------------------------------------
+ *  tool_task_scheduler_api
+ *----------------------------------------*/
+const struct tool_task_scheduler_api_t tool_task_scheduler_api = {
   .initialze    = tool_task_scheduler_initialze,
   .execute      = tool_task_scheduler_execute,
   .breakExecute = tool_task_scheduler_breakExecute,
   .addTask      = tool_task_scheduler_addTask,
   .addTaskSuper = tool_task_scheduler_addTaskSuper
 };
+
+
 
 /* *****************************************************************************************
  *  End of file
